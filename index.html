@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Card Perks">
+<meta name="theme-color" content="#1a1a1a">
+<title>Card Perks Tracker</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  :root {
+    --bg: #F7F4EF;
+    --surface: #FFFFFF;
+    --surface-2: #F0EDE8;
+    --border: #E2DDD6;
+    --text: #1C1917;
+    --text-secondary: #78716C;
+    --text-muted: #A8A29E;
+    --accent: #2D6A4F;
+    --accent-light: #E8F4EE;
+    --accent-text: #1B4332;
+    --gold: #92400E;
+    --gold-light: #FEF3C7;
+    --warn: #9A3412;
+    --warn-light: #FEE2E2;
+    --purple: #4C1D95;
+    --purple-light: #EDE9FE;
+    --blue: #1E3A5F;
+    --blue-light: #DBEAFE;
+    --radius: 14px;
+    --radius-sm: 8px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: calc(80px + var(--safe-bottom));
+  }
+
+  /* Header */
+  .app-header {
+    background: var(--text);
+    color: white;
+    padding: calc(var(--safe-top) + 16px) 20px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .app-title { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+  .app-subtitle { font-size: 12px; color: rgba(255,255,255,0.55); margin-top: 1px; letter-spacing: 0.02em; text-transform: uppercase; }
+  .header-stats { text-align: right; }
+  .stat-pill { font-size: 13px; font-weight: 600; color: #86EFAC; }
+  .stat-pill span { color: rgba(255,255,255,0.5); font-weight: 400; }
+
+  /* Progress bar */
+  .progress-wrap { margin-top: 12px; }
+  .progress-bar { height: 4px; background: rgba(255,255,255,0.15); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #86EFAC; border-radius: 2px; transition: width 0.4s ease; }
+  .progress-label { display: flex; justify-content: space-between; margin-top: 5px; font-size: 11px; color: rgba(255,255,255,0.45); }
+
+  /* Filter bar */
+  .filter-bar {
+    display: flex; gap: 8px; padding: 12px 16px; overflow-x: auto;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .filter-bar::-webkit-scrollbar { display: none; }
+  .filter-chip {
+    flex-shrink: 0; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+    border: 1.5px solid var(--border); background: transparent; color: var(--text-secondary);
+    cursor: pointer; transition: all 0.15s;
+  }
+  .filter-chip.active { background: var(--text); color: white; border-color: var(--text); }
+
+  /* Summary cards */
+  .summary-row {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    padding: 14px 16px 0;
+  }
+  .summary-card {
+    background: var(--surface); border-radius: var(--radius-sm);
+    padding: 12px 10px; text-align: center;
+    border: 1px solid var(--border);
+  }
+  .summary-val { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+  .summary-val.green { color: var(--accent); }
+  .summary-lbl { font-size: 11px; color: var(--text-muted); margin-top: 2px; line-height: 1.3; }
+
+  /* Section headers */
+  .section-wrap { padding: 0 16px; margin-top: 20px; }
+  .section-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text-muted);
+    padding: 0 0 8px; display: flex; align-items: center; gap: 6px;
+  }
+  .section-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .dot-monthly { background: var(--warn); }
+  .dot-semi { background: var(--accent); }
+  .dot-annual { background: var(--blue); }
+  .dot-4yr { background: var(--purple); }
+
+  /* Card blocks */
+  .card-block {
+    background: var(--surface); border-radius: var(--radius);
+    border: 1px solid var(--border); margin-bottom: 10px; overflow: hidden;
+  }
+  .card-head {
+    padding: 12px 14px; background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;
+  }
+  .card-name { font-size: 14px; font-weight: 600; line-height: 1.3; }
+  .card-meta { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; align-items: center; }
+  .badge {
+    font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 20px;
+    letter-spacing: 0.02em; text-transform: uppercase; white-space: nowrap;
+  }
+  .badge-business { background: var(--purple-light); color: var(--purple); }
+  .badge-personal { background: var(--accent-light); color: var(--accent-text); }
+  .badge-fee { background: var(--gold-light); color: var(--gold); }
+  .badge-free { background: var(--accent-light); color: var(--accent-text); }
+  .badge-anniv { background: var(--surface); color: var(--text-secondary); border: 1px solid var(--border); }
+  .card-progress { text-align: right; flex-shrink: 0; }
+  .card-prog-text { font-size: 12px; color: var(--text-muted); }
+  .card-prog-bar { width: 48px; height: 3px; background: var(--border); border-radius: 2px; margin-top: 4px; overflow: hidden; }
+  .card-prog-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s; }
+
+  /* Perk rows */
+  .perk-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 11px 14px; border-bottom: 1px solid var(--border);
+    cursor: pointer; transition: background 0.1s; user-select: none;
+  }
+  .perk-row:last-child { border-bottom: none; }
+  .perk-row:active { background: var(--surface-2); }
+  .perk-row.checked { opacity: 0.5; }
+  .check-circle {
+    width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    transition: all 0.15s; margin-top: 1px;
+    background: white;
+  }
+  .check-circle.done { background: var(--accent); border-color: var(--accent); }
+  .check-circle.done::after {
+    content: ''; display: block; width: 6px; height: 10px;
+    border: 2px solid white; border-top: none; border-left: none;
+    transform: rotate(45deg) translate(-1px, -1px);
+  }
+  .perk-info { flex: 1; min-width: 0; }
+  .perk-name { font-size: 13px; font-weight: 500; line-height: 1.35; }
+  .perk-note { font-size: 11px; color: var(--text-muted); margin-top: 2px; line-height: 1.4; }
+  .perk-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+  .perk-value { font-size: 13px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+  .freq-tag {
+    font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 20px;
+    white-space: nowrap; letter-spacing: 0.02em;
+  }
+  .freq-monthly { background: var(--warn-light); color: var(--warn); }
+  .freq-annual { background: var(--blue-light); color: var(--blue); }
+  .freq-semi { background: var(--accent-light); color: var(--accent-text); }
+  .freq-4yr { background: var(--purple-light); color: var(--purple); }
+
+  /* Bottom nav */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--surface); border-top: 1px solid var(--border);
+    display: flex; padding: 10px 0 calc(10px + var(--safe-bottom));
+    z-index: 100;
+  }
+  .nav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    font-size: 10px; font-weight: 500; color: var(--text-muted);
+    border: none; background: transparent; cursor: pointer; padding: 4px 0;
+    letter-spacing: 0.02em;
+  }
+  .nav-btn.active { color: var(--accent); }
+  .nav-icon { font-size: 20px; line-height: 1; }
+
+  /* Reset modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: flex; align-items: flex-end; z-index: 200;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal-sheet {
+    background: var(--surface); border-radius: 20px 20px 0 0; padding: 20px 20px calc(20px + var(--safe-bottom));
+    width: 100%; transform: translateY(100%); transition: transform 0.3s ease;
+  }
+  .modal-overlay.open .modal-sheet { transform: translateY(0); }
+  .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .modal-body { font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5; }
+  .modal-btn {
+    width: 100%; padding: 14px; border-radius: var(--radius-sm); font-size: 16px; font-weight: 600;
+    border: none; cursor: pointer; margin-bottom: 10px;
+  }
+  .modal-btn-danger { background: #DC2626; color: white; }
+  .modal-btn-cancel { background: var(--surface-2); color: var(--text); }
+
+  .empty { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px; }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-top">
+    <div>
+      <div class="app-title">Card Perks</div>
+      <div class="app-subtitle">Benefits Tracker</div>
+    </div>
+    <div class="header-stats">
+      <div class="stat-pill" id="hdr-redeemed">$0 <span>redeemed</span></div>
+      <div class="stat-pill" id="hdr-fees" style="margin-top:2px; color: rgba(255,255,255,0.5); font-size:12px;"></div>
+    </div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="progress-label"><span id="prog-left">0 of 0 credits used</span><span id="prog-pct">0%</span></div>
+  </div>
+</header>
+
+<div class="filter-bar" id="filter-bar">
+  <button class="filter-chip active" data-filter="all">All</button>
+  <button class="filter-chip" data-filter="monthly">Monthly</button>
+  <button class="filter-chip" data-filter="semi-annual">Semi-annual</button>
+  <button class="filter-chip" data-filter="annual">Annual</button>
+  <button class="filter-chip" data-filter="every 4 years">Every 4 yrs</button>
+  <button class="filter-chip" data-filter="business">Business</button>
+  <button class="filter-chip" data-filter="personal">Personal</button>
+</div>
+
+<div class="summary-row" id="summary-row"></div>
+<div id="main-content" style="padding-bottom: 8px;"></div>
+
+<nav class="bottom-nav">
+  <button class="nav-btn active" onclick="setTab('all')">
+    <span class="nav-icon">💳</span>All Cards
+  </button>
+  <button class="nav-btn" onclick="setTab('business')">
+    <span class="nav-icon">🏢</span>Business
+  </button>
+  <button class="nav-btn" onclick="setTab('personal')">
+    <span class="nav-icon">👤</span>Personal
+  </button>
+  <button class="nav-btn" onclick="openReset()">
+    <span class="nav-icon">↺</span>Reset
+  </button>
+</nav>
+
+<div class="modal-overlay" id="reset-modal">
+  <div class="modal-sheet">
+    <div class="modal-title">Reset all checks?</div>
+    <div class="modal-body">This will uncheck every benefit across all cards. You'll start fresh for the new year.</div>
+    <button class="modal-btn modal-btn-danger" onclick="confirmReset()">Yes, reset everything</button>
+    <button class="modal-btn modal-btn-cancel" onclick="closeReset()">Cancel</button>
+  </div>
+</div>
+
+<script>
+const SK = 'cc-perks-app-v1';
+let checked = {};
+try { checked = JSON.parse(localStorage.getItem(SK) || '{}'); } catch(e) {}
+
+const cards = [
+  { id:'nashville_vxb', name:'Nashville Venture X Business', type:'business', fee:395, anniversary:'Feb 27', perks:[
+    { id:'a1', name:'$300 Capital One Business Travel credit', value:300, freq:'annual', note:'Book through Capital One Business Travel portal — resets Feb 27' },
+    { id:'a2', name:'10,000 anniversary bonus miles (~$100)', value:100, freq:'annual', note:'Posted on Feb 27 anniversary date' },
+    { id:'a3', name:'Global Entry / TSA PreCheck credit', value:120, freq:'every 4 years', note:'Up to $120 every 4 years' },
+    { id:'a4', name:'Priority Pass + Capital One lounge access', value:0, freq:'annual', note:'Unlimited access — enroll after card activation' },
+  ]},
+  { id:'parsons_ink', name:'Parsons Business Mgmt Chase Ink', type:'business', fee:95, anniversary:null, perks:[
+    { id:'b1', name:'DashPass complimentary membership', value:120, freq:'annual', note:'Activate through DoorDash by 12/31/27' },
+    { id:'b2', name:'Cell phone protection', value:0, freq:'annual', note:'Pay wireless bill with this card. Up to $1,000/claim.' },
+  ]},
+  { id:'fairfax_blue', name:'Fairfax Amex Blue Business', type:'business', fee:0, anniversary:null, perks:[
+    { id:'c1', name:'Keep card active (no annual fee)', value:0, freq:'annual', note:'Make at least 1 purchase/year to keep account open and protect Membership Rewards balance' },
+  ]},
+  { id:'pm_prime', name:'PM Properties Prime Business Mastercard', type:'business', fee:0, anniversary:null, perks:[
+    { id:'d1', name:'5% back on Amazon / AWS / Whole Foods', value:0, freq:'annual', note:'Up to $150K/yr. Keep Prime membership active — all cash back, no credits to redeem.' },
+    { id:'d2', name:'2% back on top 3 non-Amazon categories', value:0, freq:'annual', note:'Auto-calculated each statement cycle on first $150K/yr' },
+  ]},
+  { id:'frederick_vxb', name:'Frederick Venture X Business', type:'business', fee:395, anniversary:'June 5', perks:[
+    { id:'e1', name:'$300 Capital One Business Travel credit', value:300, freq:'annual', note:'Book through Capital One Business Travel portal — resets June 5' },
+    { id:'e2', name:'10,000 anniversary bonus miles (~$100)', value:100, freq:'annual', note:'Posted on June 5 anniversary date' },
+    { id:'e3', name:'Global Entry / TSA PreCheck credit', value:120, freq:'every 4 years', note:'Up to $120 every 4 years' },
+    { id:'e4', name:'Priority Pass + Capital One lounge access', value:0, freq:'annual', note:'Unlimited access for primary cardholder' },
+  ]},
+  { id:'loudoun_ink', name:'Loudoun Chase Business Ink', type:'business', fee:95, anniversary:null, perks:[
+    { id:'f1', name:'DashPass complimentary membership', value:120, freq:'annual', note:'Activate through DoorDash by 12/31/27' },
+    { id:'f2', name:'Cell phone protection', value:0, freq:'annual', note:'Pay wireless bill with this card. Up to $1,000/claim.' },
+  ]},
+  { id:'flex_bizgold', name:'Flex Ventures Amex Business Gold', type:'business', fee:375, anniversary:null, perks:[
+    { id:'g1', name:'$240 FedEx / Grubhub / Office Supplies credit', value:240, freq:'monthly', note:'Up to $20/month. FedEx eligible thru 10/1/26 only — shift to Grubhub or office supplies after. Enrollment required.' },
+    { id:'g2', name:'$300 ChatGPT Business credit', value:300, freq:'annual', note:'Up to $300/yr on U.S. ChatGPT Business subscriptions. Enrollment required.' },
+    { id:'g3', name:'$150 Squarespace credit', value:150, freq:'annual', note:'U.S. Squarespace purchases. Enrollment required.' },
+    { id:'g4', name:'$155 Walmart+ credit', value:155, freq:'monthly', note:'Up to $12.95/month on Walmart+ membership' },
+  ]},
+  { id:'brambleton_ink', name:'Brambleton Chase Business Ink', type:'business', fee:95, anniversary:null, perks:[
+    { id:'h1', name:'DashPass complimentary membership', value:120, freq:'annual', note:'Activate through DoorDash by 12/31/27' },
+    { id:'h2', name:'Cell phone protection', value:0, freq:'annual', note:'Pay wireless bill with this card. Up to $1,000/claim.' },
+  ]},
+  { id:'charissa_csp', name:'Charissa — Chase Sapphire Preferred', type:'personal', fee:95, anniversary:null, perks:[
+    { id:'i1', name:'$100 Chase Travel hotel credit', value:100, freq:'annual', note:'Prepaid hotel bookings through Chase Travel — resets on anniversary date' },
+    { id:'i2', name:'1 year Apple TV+ subscription', value:156, freq:'annual', note:'Activate by Dec 31, 2026' },
+    { id:'i3', name:'DashPass membership', value:120, freq:'annual', note:'Activate through DoorDash by 12/31/27' },
+    { id:'i4', name:'Global Entry / TSA PreCheck / NEXUS credit', value:120, freq:'every 4 years', note:'Up to $120 every 4 years' },
+  ]},
+  { id:'richie_csp', name:'Richie — Chase Sapphire Preferred', type:'personal', fee:95, anniversary:null, perks:[
+    { id:'j1', name:'$100 Chase Travel hotel credit', value:100, freq:'annual', note:'Prepaid hotel bookings through Chase Travel — resets on anniversary date' },
+    { id:'j2', name:'1 year Apple TV+ subscription', value:156, freq:'annual', note:'Activate by Dec 31, 2026' },
+    { id:'j3', name:'DashPass membership', value:120, freq:'annual', note:'Activate through DoorDash by 12/31/27' },
+    { id:'j4', name:'Global Entry / TSA PreCheck / NEXUS credit', value:120, freq:'every 4 years', note:'Up to $120 every 4 years' },
+  ]},
+  { id:'amex_gold', name:'Amex Gold', type:'personal', fee:325, anniversary:null, perks:[
+    { id:'k1', name:'$120 dining credit (Grubhub, BWW, Five Guys, Cheesecake Factory, Wonder)', value:120, freq:'monthly', note:'Up to $10/month — does not roll over. Enrollment required.' },
+    { id:'k2', name:'$120 Uber Cash', value:120, freq:'monthly', note:'$10/month to Uber account. Add Gold Card to Uber app first.' },
+    { id:'k3', name:"$84 Dunkin' credit", value:84, freq:'monthly', note:'Up to $7/month at U.S. Dunkin\' locations. Enrollment required.' },
+    { id:'k4', name:'$100 Resy restaurant credit', value:100, freq:'semi-annual', note:'$50 Jan–Jun, $50 Jul–Dec at qualifying Resy restaurants. Enrollment required.' },
+    { id:'k5', name:'$100 Hotel Collection experience credit', value:100, freq:'annual', note:'Per eligible 2-night+ stay booked through AmexTravel.com' },
+  ]},
+  { id:'venture', name:'Capital One Venture', type:'personal', fee:95, anniversary:null, perks:[
+    { id:'l1', name:'Global Entry / TSA PreCheck credit', value:120, freq:'every 4 years', note:'Up to $120 every 4 years' },
+  ]},
+  { id:'bilt', name:'Bilt Palladium', type:'personal', fee:495, anniversary:null, perks:[
+    { id:'m1', name:'$200 Bilt Travel hotel credit (Jan)', value:200, freq:'semi-annual', note:'Credited in January for Bilt Travel Portal hotel bookings. Min 2-night stay.' },
+    { id:'m2', name:'$200 Bilt Travel hotel credit (Jul)', value:200, freq:'semi-annual', note:'Credited in July for Bilt Travel Portal hotel bookings. Min 2-night stay.' },
+    { id:'m3', name:'$200 Bilt Cash (annual)', value:200, freq:'annual', note:'Credited Jan 1. Up to $100 rolls over; remainder expires Dec 31.' },
+    { id:'m4', name:'Priority Pass lounge access + 2 guests', value:0, freq:'annual', note:'Unlimited access. Up to 2 guests per visit.' },
+  ]},
+  { id:'southwest', name:'Southwest Rapid Rewards Plus', type:'personal', fee:99, anniversary:null, perks:[
+    { id:'n1', name:'3,000 anniversary bonus points (~$38)', value:38, freq:'annual', note:'Posted on anniversary date' },
+    { id:'n2', name:'10% flight discount promo code', value:0, freq:'annual', note:'One promo code/year for 10% off any Southwest flight (excludes Basic fare)' },
+    { id:'n3', name:'Free first checked bag', value:0, freq:'annual', note:'You + up to 8 passengers on same reservation' },
+    { id:'n4', name:'10,000 Companion Pass qualifying points boost', value:0, freq:'annual', note:'Calendar-year boost toward 135,000-point Companion Pass threshold' },
+  ]},
+  { id:'hilton', name:'Hilton Honors Amex Surpass', type:'personal', fee:150, anniversary:null, perks:[
+    { id:'o1', name:'$50 Hilton property credit — Q1 (Jan–Mar)', value:50, freq:'semi-annual', note:'Use at any Hilton — dining, spa, parking, etc. Does not roll over.' },
+    { id:'o2', name:'$50 Hilton property credit — Q2 (Apr–Jun)', value:50, freq:'semi-annual', note:'Use at any Hilton property. Does not roll over.' },
+    { id:'o3', name:'$50 Hilton property credit — Q3 (Jul–Sep)', value:50, freq:'semi-annual', note:'Use at any Hilton property. Does not roll over.' },
+    { id:'o4', name:'$50 Hilton property credit — Q4 (Oct–Dec)', value:50, freq:'semi-annual', note:'Use at any Hilton property. Does not roll over.' },
+    { id:'o5', name:'Complimentary Hilton Gold status', value:0, freq:'annual', note:'Automatic with card. Includes 80% bonus points, continental breakfast at select brands, room upgrades.' },
+    { id:'o6', name:'Free Night Reward (after $15K spend)', value:0, freq:'annual', note:'1 free standard night if you spend $15,000 in a calendar year' },
+    { id:'o7', name:'National Car Rental Emerald Club Executive status', value:0, freq:'annual', note:'Enroll through Amex online account. Executive Area access + upgrades.' },
+  ]},
+];
+
+const freqClass = { monthly:'freq-monthly', annual:'freq-annual', 'semi-annual':'freq-semi', 'every 4 years':'freq-4yr' };
+const freqLabel = { monthly:'Monthly', annual:'Annual', 'semi-annual':'Semi-annual', 'every 4 years':'Every 4 yrs' };
+const sections = [
+  { key:'monthly', label:'Monthly — use every month', dotClass:'dot-monthly' },
+  { key:'semi-annual', label:'Semi-annual / Quarterly', dotClass:'dot-semi' },
+  { key:'annual', label:'Annual — once per card year', dotClass:'dot-annual' },
+  { key:'every 4 years', label:'Every 4 years — set a reminder', dotClass:'dot-4yr' },
+];
+
+let activeFilter = 'all';
+let activeTab = 'all';
+
+function save() { try { localStorage.setItem(SK, JSON.stringify(checked)); } catch(e) {} }
+function toggle(id) { checked[id] = !checked[id]; save(); render(); }
+function openReset() { document.getElementById('reset-modal').classList.add('open'); }
+function closeReset() { document.getElementById('reset-modal').classList.remove('open'); }
+function confirmReset() { checked = {}; save(); closeReset(); render(); }
+function setTab(t) {
+  activeTab = t; activeFilter = 'all';
+  document.querySelectorAll('.nav-btn').forEach((b,i) => b.classList.toggle('active', ['all','business','personal','reset'][i] === t));
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c.dataset.filter === 'all'));
+  render();
+}
+
+document.getElementById('filter-bar').addEventListener('click', e => {
+  const chip = e.target.closest('.filter-chip');
+  if (!chip) return;
+  activeFilter = chip.dataset.filter;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c === chip));
+  render();
+});
+
+document.getElementById('reset-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('reset-modal')) closeReset();
+});
+
+function getFiltered() {
+  const typeFilter = activeTab !== 'all' ? activeTab : (activeFilter === 'business' || activeFilter === 'personal' ? activeFilter : 'all');
+  const freqFilter = (activeFilter !== 'business' && activeFilter !== 'personal' && activeFilter !== 'all') ? activeFilter : 'all';
+  return cards.map(c => ({
+    ...c,
+    perks: c.perks.filter(p => freqFilter === 'all' || p.freq === freqFilter)
+  })).filter(c => (typeFilter === 'all' || c.type === typeFilter) && c.perks.length > 0);
+}
+
+function render() {
+  const fc = getFiltered();
+  const allPerks = fc.flatMap(c => c.perks);
+  const totalValue = allPerks.filter(p => p.value > 0).reduce((a, p) => a + p.value, 0);
+  const checkedValue = allPerks.filter(p => checked[p.id] && p.value > 0).reduce((a, p) => a + p.value, 0);
+  const checkedCount = allPerks.filter(p => checked[p.id] && p.value > 0).length;
+  const totalCount = allPerks.filter(p => p.value > 0).length;
+  const totalFees = cards.reduce((a, c) => a + (c.fee || 0), 0);
+  const pct = totalValue ? Math.round(checkedValue / totalValue * 100) : 0;
+
+  document.getElementById('hdr-redeemed').innerHTML = `$${checkedValue.toLocaleString()} <span>redeemed</span>`;
+  document.getElementById('hdr-fees').textContent = `$${totalFees.toLocaleString()} total annual fees`;
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-left').textContent = `${checkedCount} of ${totalCount} credits used`;
+  document.getElementById('prog-pct').textContent = pct + '%';
+
+  document.getElementById('summary-row').innerHTML = `
+    <div class="summary-card"><div class="summary-val">$${totalFees.toLocaleString()}</div><div class="summary-lbl">Annual fees</div></div>
+    <div class="summary-card"><div class="summary-val">$${totalValue.toLocaleString()}</div><div class="summary-lbl">Trackable credits</div></div>
+    <div class="summary-card"><div class="summary-val green">$${checkedValue.toLocaleString()}</div><div class="summary-lbl">Credits used</div></div>
+  `;
+
+  const grouped = {};
+  sections.forEach(s => { grouped[s.key] = []; });
+  fc.forEach(card => {
+    const byFreq = {};
+    card.perks.forEach(p => { if (!byFreq[p.freq]) byFreq[p.freq] = []; byFreq[p.freq].push(p); });
+    Object.entries(byFreq).forEach(([freq, perks]) => { if (grouped[freq]) grouped[freq].push({ card, perks }); });
+  });
+
+  let html = '';
+  sections.forEach(({ key, label, dotClass }) => {
+    const items = grouped[key];
+    if (!items || !items.length) return;
+    html += `<div class="section-wrap">
+      <div class="section-label"><span class="section-dot ${dotClass}"></span>${label}</div>`;
+    items.forEach(({ card, perks }) => {
+      const done = perks.filter(p => checked[p.id]).length;
+      const perkPct = perks.length ? Math.round(done / perks.length * 100) : 0;
+      const feeTag = card.fee === 0
+        ? `<span class="badge badge-free">No annual fee</span>`
+        : `<span class="badge badge-fee">$${card.fee}/yr</span>`;
+      const anniversaryTag = card.anniversary
+        ? `<span class="badge badge-anniv">📅 ${card.anniversary}</span>` : '';
+      html += `<div class="card-block">
+        <div class="card-head">
+          <div>
+            <div class="card-name">${card.name}</div>
+            <div class="card-meta">
+              <span class="badge badge-${card.type}">${card.type}</span>
+              ${feeTag}${anniversaryTag}
+            </div>
+          </div>
+          <div class="card-progress">
+            <div class="card-prog-text">${done}/${perks.length}</div>
+            <div class="card-prog-bar"><div class="card-prog-fill" style="width:${perkPct}%"></div></div>
+          </div>
+        </div>
+        ${perks.map(p => `
+          <div class="perk-row ${checked[p.id] ? 'checked' : ''}" onclick="toggle('${p.id}')">
+            <div class="check-circle ${checked[p.id] ? 'done' : ''}"></div>
+            <div class="perk-info">
+              <div class="perk-name">${p.name}</div>
+              ${p.note ? `<div class="perk-note">${p.note}</div>` : ''}
+            </div>
+            <div class="perk-right">
+              ${p.value ? `<div class="perk-value">+$${p.value}</div>` : '<div class="perk-value" style="color:var(--text-muted);font-size:11px">perk</div>'}
+              <span class="freq-tag ${freqClass[p.freq]}">${freqLabel[p.freq]}</span>
+            </div>
+          </div>`).join('')}
+      </div>`;
+    });
+    html += '</div>';
+  });
+
+  if (!html) html = '<div class="empty">No cards match this filter.</div>';
+  document.getElementById('main-content').innerHTML = html;
+}
+
+render();
+</script>
+
+<!-- PWA Service Worker -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
